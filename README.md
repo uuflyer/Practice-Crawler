@@ -1,6 +1,6 @@
 # 多线程练习：解决一个类的线程安全问题
 
-我们有一个在多线程环境下不安全的[`Counter`](https://github.com/hcsp/fix-threadsafe-issue/blob/master/src/main/com/github/hcsp/multithread/Counter.java)类，请将它改写为线程安全的。
+我们有一个在多线程环境下不安全的[`Counter`](https://github.com/hcsp/fix-threadsafe-issue/blob/master/src/main/java/com/github/hcsp/multithread/Counter.java)类，请将它改写为线程安全的。
 
 我们鼓励你使用多种方法：
 
@@ -12,7 +12,7 @@
 
 -----
 注意！我们只允许你修改以下文件，对其他文件的修改会被拒绝：
-- [src/main/com/github/hcsp/multithread/Counter.java](https://github.com/hcsp/fix-threadsafe-issue/blob/master/src/main/com/github/hcsp/multithread/Counter.java)
+- [src/main/java/com/github/hcsp/multithread/Counter.java](https://github.com/hcsp/fix-threadsafe-issue/blob/master/src/main/java/com/github/hcsp/multithread/Counter.java)
 -----
 
 
