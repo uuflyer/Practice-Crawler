@@ -10,6 +10,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -30,48 +31,77 @@ public class Main {
             if (linkPool.isEmpty()) {
                 break;
             }
-
-            //这里的作用是把链接池中使用过的链接删除掉，否则它会一直执行一个链接
             //为什么选择是从后面删除呢？因为ArrayList删除是会依次将每个元素位置往前移动
             //所以删除最后一个这样做更有效率一些
             String link = linkPool.remove(linkPool.size() - 1);
 
-            //如果已处理池中不包含他就继续执行
-            if (!processedLinks.contains(link)) {
+            //如果已处理池中不包含就继续执行
+            if (processedLinks.contains(link)) {
                 continue;
             }
 
-            if (!link.contains("sina.cn") || link.contains("passport.sina.cn")) {
+            if (isInterest(link)) {
+                Document doc = httpGetAndParseHtml(link, userAgent);
+                ArrayList<Element> links = doc.select("a");
+                links.stream().map(aTag -> aTag.attr("href")).forEach(linkPool::add);
+
+                storeIntoDataBaseIfIsNewsPage(doc);
+            } else {
                 //这里是我们不感兴趣的网站
                 continue;
-            } else {
-                //在前端HTML语言中"//"表示当前页面的http或者https
-                if (link.startsWith("//")) {
-                    link = "https:" + link;
-                }
-                CloseableHttpClient httpclient = HttpClients.createDefault();
-                HttpGet httpGet = new HttpGet("https://sina.cn");
-                httpGet.addHeader("User-Agent", userAgent);
+            }
+            processedLinks.add(link);
+        }
+    }
 
-                try (CloseableHttpResponse response1 = httpclient.execute(httpGet)) {
-                    System.out.println(link);
-                    System.out.println(response1.getStatusLine());
+    private static void storeIntoDataBaseIfIsNewsPage(Document doc) {
+        ArrayList<Element> articleTags = doc.select("article");
 
-                    HttpEntity entity1 = response1.getEntity();
-
-                    String html = EntityUtils.toString(entity1);
-
-                    //调用Jsoup进行对HTML字符串信息解析
-                    Document doc = Jsoup.parse(html);
-
-                    //使用Document对象查找a标签的所有信息
-                    ArrayList<Element> links = doc.select("a");
-
-                    for (Element aTag : links) {
-                        linkPool.add(aTag.attr("href"));
-                    }
-                }
+        if (!articleTags.isEmpty()) {
+            for (Element articleTag : articleTags) {
+                String title = articleTags.get(0).child(0).text();
+                System.out.println(title);
             }
         }
     }
+
+
+    private static Document httpGetAndParseHtml(String link, String userAgent) throws IOException {
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+
+        //在前端HTML语言中"//"表示当前页面的http或者https
+        if (link.startsWith("//")) {
+            link = "https:" + link;
+        }
+
+        HttpGet httpGet = new HttpGet(link);
+        httpGet.addHeader("User-Agent", userAgent);
+
+        try (CloseableHttpResponse response1 = httpclient.execute(httpGet)) {
+            System.out.println(link);
+            System.out.println(response1.getStatusLine());
+            HttpEntity entity1 = response1.getEntity();
+
+            String html = EntityUtils.toString(entity1);
+
+            return Jsoup.parse(html);
+        }
+    }
+
+    private static boolean isInterest(String link) {
+        return (isNews(link) || isIndex(link)) && isNotLogPage(link);
+    }
+
+    private static boolean isNotLogPage(String link) {
+        return !link.contains("passport.sina.cn");
+    }
+
+    private static boolean isIndex(String link) {
+        return "https://sina.cn".equals(link);
+    }
+
+    private static boolean isNews(String link) {
+        return link.contains("news.sina.cn");
+    }
 }
+
