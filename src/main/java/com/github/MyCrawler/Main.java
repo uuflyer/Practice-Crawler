@@ -10,57 +10,66 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
-
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Main {
 
-    public static void main(String[] args) throws IOException {
+    private CrawlerDao dao = new jdbcCrawlerDao();
+
+    public void run() throws SQLException, IOException {
         final String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36";
-        //待处理的链接池
-        List<String> linkPool = new ArrayList<>();
-        //已经处理的链接池
-        Set<String> processedLinks = new HashSet<>();
-        linkPool.add("https://sina.cn");
 
-        while (true) {
-            if (linkPool.isEmpty()) {
-                break;
+        String link;
+        while ((link = dao.getNextLinkFromDataBaseAndDeleteIt()) != null) {
+
+            if (!dao.isLinkProcessed(link)) {
+                if (isInterest(link)) {
+                    Document doc = httpGetAndParseHtml(link, userAgent);
+
+                    parseHtmlFromPageAndStoreIntoDataBase(doc);
+
+                    storeIntoDataBaseIfIsNewsPage(doc, link);
+
+                    dao.upDateDataBase("INSERT INTO LINK_ALREADY_PROCESSED  values (?)", link);
+                }
             }
-            //为什么选择是从后面删除呢？因为ArrayList删除是会依次将每个元素位置往前移动
-            //所以删除最后一个这样做更有效率一些
-            String link = linkPool.remove(linkPool.size() - 1);
-
-            //如果已处理池中不包含就继续执行
-            if (processedLinks.contains(link)) {
-                continue;
-            }
-
-            if (isInterest(link)) {
-                Document doc = httpGetAndParseHtml(link, userAgent);
-                ArrayList<Element> links = doc.select("a");
-                links.stream().map(aTag -> aTag.attr("href")).forEach(linkPool::add);
-
-                storeIntoDataBaseIfIsNewsPage(doc);
-            } else {
-                //这里是我们不感兴趣的网站
-                continue;
-            }
-            processedLinks.add(link);
         }
     }
 
-    private static void storeIntoDataBaseIfIsNewsPage(Document doc) {
+    public static void main(String[] args) throws IOException, SQLException {
+        new Main().run();
+    }
+
+
+    private void parseHtmlFromPageAndStoreIntoDataBase(Document doc) throws SQLException {
+        ArrayList<Element> links = doc.select("a");
+        for (Element aTag : links) {
+            String href = aTag.attr("href");
+            //在前端HTML语言中"//"表示当前页面的http或者https
+            if (href.startsWith("//")) {
+                href = "https:" + href;
+            }
+            if (!href.toLowerCase().startsWith("javascript")) {
+                dao.upDateDataBase("insert into LINK_TO_BE_PROCESSED values (?)", href);
+            }
+        }
+    }
+
+
+    private void storeIntoDataBaseIfIsNewsPage(Document doc, String link) throws SQLException {
         ArrayList<Element> articleTags = doc.select("article");
 
         if (!articleTags.isEmpty()) {
             for (Element articleTag : articleTags) {
                 String title = articleTags.get(0).child(0).text();
+                String content = articleTags.stream().map(Element::text).collect(Collectors.joining());
+
+                dao.storeNewsIntoDataBase(title, link, content);
                 System.out.println(title);
+
             }
         }
     }
@@ -69,17 +78,12 @@ public class Main {
     private static Document httpGetAndParseHtml(String link, String userAgent) throws IOException {
         CloseableHttpClient httpclient = HttpClients.createDefault();
 
-        //在前端HTML语言中"//"表示当前页面的http或者https
-        if (link.startsWith("//")) {
-            link = "https:" + link;
-        }
 
         HttpGet httpGet = new HttpGet(link);
         httpGet.addHeader("User-Agent", userAgent);
 
         try (CloseableHttpResponse response1 = httpclient.execute(httpGet)) {
             System.out.println(link);
-            System.out.println(response1.getStatusLine());
             HttpEntity entity1 = response1.getEntity();
 
             String html = EntityUtils.toString(entity1);
@@ -93,7 +97,7 @@ public class Main {
     }
 
     private static boolean isNotLogPage(String link) {
-        return !link.contains("passport.sina.cn");
+        return !(link.contains("passport.sina.cn") || link.contains("hotnews.sina.cn"));
     }
 
     private static boolean isIndex(String link) {
