@@ -1,21 +1,24 @@
 package com.github.MyCrawler;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.sql.ResultSet;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-public class jdbcCrawlerDao implements CrawlerDao {
-    private final String UserName = "root";
-    private final String Password = "root";
+public class JdbcCrawlerDao implements CrawlerDao {
+    private static final String UserName = "root";
+    private static final String Password = "root";
     Connection connection;
 
-    public jdbcCrawlerDao() {
+    @SuppressFBWarnings("DMI_CONSTANT_DB_PASSWORD")
+    public JdbcCrawlerDao() {
         try {
             this.connection = DriverManager.getConnection("jdbc:h2:file:E:/Software/My-Crawler/news", UserName, Password);
         } catch (SQLException e) {
-            throw new RuntimeException();
+            throw new RuntimeException(e);
         }
     }
 
@@ -74,5 +77,15 @@ public class jdbcCrawlerDao implements CrawlerDao {
             statement.setString(1, link);
             statement.executeUpdate();
         }
+    }
+
+    @Override
+    public void insertProcessedLink(String link) throws SQLException {
+        upDateDataBase("INSERT INTO LINK_ALREADY_PROCESSED  values (?)", link);
+    }
+
+    @Override
+    public void insertToBeProcessedLink(String href) throws SQLException {
+        upDateDataBase("insert into LINK_TO_BE_PROCESSED values (?)", href);
     }
 }

@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 public class Main {
 
-    private CrawlerDao dao = new jdbcCrawlerDao();
+    private CrawlerDao dao = new MyBasticDao();
 
     public void run() throws SQLException, IOException {
         final String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36";
@@ -33,7 +33,7 @@ public class Main {
 
                     storeIntoDataBaseIfIsNewsPage(doc, link);
 
-                    dao.upDateDataBase("INSERT INTO LINK_ALREADY_PROCESSED  values (?)", link);
+                    dao.insertProcessedLink(link);
                 }
             }
         }
@@ -53,7 +53,7 @@ public class Main {
                 href = "https:" + href;
             }
             if (!href.toLowerCase().startsWith("javascript")) {
-                dao.upDateDataBase("insert into LINK_TO_BE_PROCESSED values (?)", href);
+                dao.insertToBeProcessedLink(href);
             }
         }
     }
@@ -65,7 +65,7 @@ public class Main {
         if (!articleTags.isEmpty()) {
             for (Element articleTag : articleTags) {
                 String title = articleTags.get(0).child(0).text();
-                String content = articleTags.stream().map(Element::text).collect(Collectors.joining());
+                String content = articleTag.select("p").stream().map(Element::text).collect(Collectors.joining("/n"));
 
                 dao.storeNewsIntoDataBase(title, link, content);
                 System.out.println(title);
