@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="tql.MyMapper">
+    <select id="selectNextAvailableLink" resultType="String">
+        select link
+        From LINK_TO_BE_PROCESSED
+        limit 1
+    </select>
+
+    <delete id="deleteLink" parameterType="String">
+        delete
+        from LINK_TO_BE_PROCESSED
+        where link = #{link}
+    </delete>
+
+    <insert id="insertNews" parameterType="com.github.MyCrawler.News">
+        insert into NEWS (TITLE, URL, CONTENT, CREATED_AT, UPDATE_AT)
+        values (#{title}, #{url}, #{content}, now(), now())
+    </insert>
+
+    <select id="countLink" parameterType="String" resultType="int">
+        select count(link)
+        From LINK_ALREADY_PROCESSED
+        where LINK = #{link}
+    </select>
+
+    <insert id="insertLink" parameterType="HashMap">
+        insert into
+        <choose>
+            <when test="tableName == 'LINK_TO_BE_PROCESSED'">
+                LINK_TO_BE_PROCESSED
+            </when>
+            <otherwise>
+                LINK_ALREADY_PROCESSED
+            </otherwise>
+        </choose>
+        (link)
+        values ( #{link} )
+    </insert>
+</mapper>
