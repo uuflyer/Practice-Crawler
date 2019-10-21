@@ -1,12 +1,15 @@
 package com.github.MyCrawler;
 
+
 import java.time.Instant;
+
 
 public class News {
     private Integer id;
     private String title;
     private String content;
     private String url;
+
     private Instant createdAt;
     private Instant updateAt;
 
@@ -22,11 +25,13 @@ public class News {
         this.updateAt = old.updateAt;
     }
 
+
     public News(String title, String url, String content) {
         this.title = title;
         this.content = content;
         this.url = url;
     }
+
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -43,6 +48,7 @@ public class News {
     public void setUpdateAt(Instant updateAt) {
         this.updateAt = updateAt;
     }
+
 
     public String getTitle() {
         return title;
