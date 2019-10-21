@@ -4,16 +4,18 @@ import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+import org.elasticsearch.action.search.SearchRequest;
 
+import javax.naming.directory.SearchResult;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MyBasticDao implements CrawlerDao {
+public class MyBatisDao implements CrawlerDao {
     private SqlSessionFactory sqlSessionFactory;
 
-    public MyBasticDao() {
+    public MyBatisDao() {
         try {
             String resource = "db/mybatis/config.xml";
             InputStream inputStream = Resources.getResourceAsStream(resource);
@@ -25,7 +27,7 @@ public class MyBasticDao implements CrawlerDao {
 
 
     @Override
-    public String getNextLinkFromDataBaseAndDeleteIt() {
+    public synchronized String getNextLinkFromDataBaseAndDeleteIt() {
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             String link = session.selectOne("tql.MyMapper.selectNextAvailableLink");
             if (link != null) {
